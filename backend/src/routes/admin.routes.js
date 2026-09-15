@@ -4,7 +4,13 @@ import {
   createIntern,
   createTeamLeader,
   getAllTeamLeaders,
+  getTeamLeaderById,
+  updateTeamLeader,
   getInternsByTeamLeader,
+  getAllInterns,
+  getInternById,
+  updateIntern,
+  assignInternTeamLeader,
   getForwardedRequests,
   finalizeRequest,
   getCertificateDraft,
@@ -14,6 +20,7 @@ import {
   retryCertificateGeneration,
   downloadCertificatePdf
 } from "../controllers/admin.controller.js";
+import { updateInternValidator, assignTeamLeaderValidator } from "../validators/intern.validator.js";
 import verifyAuth from "../middlewares/verifyAuth.js";
 import requireAdmin from "../middlewares/requireAdmin.js";
 
@@ -26,8 +33,16 @@ adminRouter.post("/create-intern", verifyAuth, requireAdmin, registerValidator, 
 // POST api/auth/register-tl
 adminRouter.post("/create-tl", verifyAuth, requireAdmin, teamLeaderValidator, createTeamLeader);
 
-adminRouter.get("/teamleaders", verifyAuth, requireAdmin, getAllTeamLeaders);
+// Intern Management routes
+adminRouter.get("/interns", verifyAuth, requireAdmin, getAllInterns);
+adminRouter.get("/interns/:id", verifyAuth, requireAdmin, getInternById);
+adminRouter.patch("/interns/:id", verifyAuth, requireAdmin, updateInternValidator, updateIntern);
+adminRouter.patch("/interns/:id/assignment", verifyAuth, requireAdmin, assignTeamLeaderValidator, assignInternTeamLeader);
 
+// Team Leader Management routes
+adminRouter.get("/teamleaders", verifyAuth, requireAdmin, getAllTeamLeaders);
+adminRouter.get("/teamleaders/:id", verifyAuth, requireAdmin, getTeamLeaderById);
+adminRouter.patch("/teamleaders/:id", verifyAuth, requireAdmin, updateTeamLeader);
 adminRouter.get("/teamleaders/:id/interns", verifyAuth, requireAdmin, getInternsByTeamLeader);
 
 adminRouter.get("/forwarded-requests", verifyAuth, requireAdmin, getForwardedRequests);

@@ -22,7 +22,25 @@ const request = async (method, url, payload) => {
 
 export const createIntern = (payload) => request('post', '/api/admin/create-intern', payload);
 export const createTeamLeader = (payload) => request('post', '/api/admin/create-tl', payload);
-export const getAllTeamLeaders = () => request('get', '/api/admin/teamleaders');
+
+// Intern Management API
+export const getAllInterns = (params = {}) => {
+  const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''));
+  const qs = query.toString() ? `?${query.toString()}` : '';
+  return request('get', `/api/admin/interns${qs}`);
+};
+export const getInternById = (id) => request('get', `/api/admin/interns/${id}`);
+export const updateIntern = (id, payload) => request('patch', `/api/admin/interns/${id}`, payload);
+export const assignInternTeamLeader = (id, teamLeaderId) => request('patch', `/api/admin/interns/${id}/assignment`, { teamLeaderId });
+
+// Team Leader Management API
+export const getAllTeamLeaders = (params = {}) => {
+  const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''));
+  const qs = query.toString() ? `?${query.toString()}` : '';
+  return request('get', `/api/admin/teamleaders${qs}`);
+};
+export const getTeamLeaderById = (id) => request('get', `/api/admin/teamleaders/${id}`);
+export const updateTeamLeader = (id, payload) => request('patch', `/api/admin/teamleaders/${id}`, payload);
 export const getInternsByTeamLeader = (id) => request('get', `/api/admin/teamleaders/${id}/interns`);
 export const getForwardedRequests = () => request('get', '/api/admin/forwarded-requests');
 export const finalizeRequest = (id, action, rejectionReason) => request(
