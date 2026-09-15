@@ -19,7 +19,7 @@ const generateRequestNumber = async () => {
 
 export const submitCertificateRequest = async (req, res) => {
   try {
-    const { certificateType, reason } = req.body;
+    const { certificateType, reason, metadata } = req.body;
 
     if (!certificateType || !ALLOWED_TYPES.includes(certificateType)) {
       return res.status(400).json({ message: 'Valid certificate type is required' });
@@ -33,6 +33,30 @@ export const submitCertificateRequest = async (req, res) => {
       return res.status(404).json({ message: 'No internship details found for this account' });
     }
 
+    // Eligibility validations
+    const now = new Date();
+    const hasEnded = user.endDate && new Date(user.endDate) < now;
+    const isOngoing = user.internshipDetails?.status === 'ongoing' || !hasEnded;
+    const isCompleted = user.internshipDetails?.status === 'completed' || hasEnded;
+
+    if (certificateType === 'bonafide' && !isOngoing) {
+      return res.status(400).json({
+        message: 'Bonafide certificate is only available for internships currently in progress'
+      });
+    }
+
+    if (certificateType === 'completion_certificate' && !isCompleted) {
+      return res.status(400).json({
+        message: 'Internship completion certificate is only available after completing your internship'
+      });
+    }
+
+    if (certificateType === 'experience_letter' && !isCompleted) {
+      return res.status(400).json({
+        message: 'Experience letter is only available after completing your internship'
+      });
+    }
+
     const existingPending = await CertificateRequest.findOne({
       userId: req.user.id,
       certificateType,
@@ -44,12 +68,23 @@ export const submitCertificateRequest = async (req, res) => {
 
     const requestNumber = await generateRequestNumber();
 
+    // Sanitize metadata to Map of strings only, preventing prototype pollution
+    const safeMetadata = {};
+    if (metadata && typeof metadata === 'object') {
+      for (const [key, val] of Object.entries(metadata)) {
+        if (typeof val === 'string' && val.trim()) {
+          safeMetadata[key] = val.trim();
+        }
+      }
+    }
+
     const request = await CertificateRequest.create({
       requestNumber,
       userId: req.user.id,
       internCode: user.internCode,
       certificateType,
-      reason
+      reason,
+      metadata: safeMetadata
     });
 
     res.status(201).json({ request });

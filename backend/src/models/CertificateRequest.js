@@ -38,6 +38,12 @@ const certificateRequestSchema = new mongoose.Schema(
         trim: true
     },
 
+    metadata: {
+        type: Map,
+        of: String,
+        default: {}
+    },
+
     status: {
         type: String,
         enum: [
