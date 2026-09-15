@@ -15,6 +15,7 @@ import {
   finalizeCertificate as finalizeCertificateService,
   sendCertificateEmail
 } from '../services/certificate.service.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 dotenv.config();
 
@@ -28,10 +29,11 @@ export async function createIntern(req, res) {
             domain,
             startDate,
             endDate,
-            teamleaderEmail
+            teamleaderEmail,
+            teamLeaderId
         } = req.body;
 
-        const isUserExists = await User.findOne({ email });
+        const isUserExists = await User.findOne({ email: email.toLowerCase() });
 
         if (isUserExists) {
             return res.status(409).json({
@@ -39,8 +41,15 @@ export async function createIntern(req, res) {
             })
         };
 
-        if (teamleaderEmail) {
-            const tl = await User.findOne({ email: teamleaderEmail.toLowerCase(), role: 'teamleader' });
+        let tl = null;
+        if (teamLeaderId) {
+            if (!mongoose.Types.ObjectId.isValid(teamLeaderId)) {
+                return res.status(400).json({ message: 'Invalid teamLeaderId format' });
+            }
+            tl = await User.findOne({ _id: teamLeaderId, role: 'teamleader' });
+            if (!tl) return res.status(400).json({ message: 'No team leader found with this ID' });
+        } else if (teamleaderEmail) {
+            tl = await User.findOne({ email: teamleaderEmail.toLowerCase(), role: 'teamleader' });
             if (!tl) return res.status(400).json({ message: 'No team leader found with this email' });
         }
 
@@ -48,7 +57,7 @@ export async function createIntern(req, res) {
 
         const user = await User.create({
             fullName,
-            email,
+            email: email.toLowerCase(),
             mobileNo,
             internCode,
             domain,
@@ -57,7 +66,8 @@ export async function createIntern(req, res) {
             role: "intern",
             password: internCode,
             internshipDetails: {
-                teamleaderEmail: teamleaderEmail?.toLowerCase(),
+                teamLeader: tl?._id,
+                teamleaderEmail: tl?.email?.toLowerCase(),
                 status: 'upcoming',
                 createdBy: req.user.id
             }
@@ -132,13 +142,354 @@ export async function createTeamLeader(req, res) {
     }
 }
 
+export async function getAllInterns(req, res) {
+    try {
+        const filter = { role: 'intern' };
+
+        if (req.query.search) {
+            const s = req.query.search.trim();
+            filter.$and = [
+                {
+                    $or: [
+                        { fullName: { $regex: s, $options: 'i' } },
+                        { email: { $regex: s, $options: 'i' } },
+                        { internCode: { $regex: s, $options: 'i' } },
+                        { domain: { $regex: s, $options: 'i' } }
+                    ]
+                }
+            ];
+        }
+
+        if (req.query.domain) {
+            filter.domain = req.query.domain;
+        }
+
+        if (req.query.status) {
+            filter['internshipDetails.status'] = req.query.status;
+        }
+
+        if (req.query.teamLeaderId) {
+            if (mongoose.Types.ObjectId.isValid(req.query.teamLeaderId)) {
+                filter.$or = [
+                    { 'internshipDetails.teamLeader': req.query.teamLeaderId },
+                    { 'internshipDetails.teamleaderEmail': req.query.teamLeaderId.toLowerCase() }
+                ];
+            } else {
+                filter['internshipDetails.teamleaderEmail'] = req.query.teamLeaderId.toLowerCase();
+            }
+        }
+
+        const interns = await User.find(filter)
+            .select('-password -resetPasswordToken -resetPasswordExpires')
+            .populate('internshipDetails.teamLeader', 'fullName email mobileNo')
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            message: 'Interns fetched successfully',
+            interns,
+            total: interns.length
+        });
+    } catch (err) {
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+}
+
+export async function getInternById(req, res) {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid intern ID format' });
+        }
+
+        const intern = await User.findOne({ _id: id, role: 'intern' })
+            .select('-password -resetPasswordToken -resetPasswordExpires')
+            .populate('internshipDetails.teamLeader', 'fullName email mobileNo');
+
+        if (!intern) {
+            return res.status(404).json({ message: 'Intern not found' });
+        }
+
+        const requests = await CertificateRequest.find({ userId: intern._id }).sort({ requestedAt: -1 });
+        const certificates = await Certificate.find({ userId: intern._id, status: 'finalized' })
+            .select('-htmlContent')
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            message: 'Intern fetched successfully',
+            intern,
+            requests,
+            certificates
+        });
+    } catch (err) {
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+}
+
+export async function updateIntern(req, res) {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid intern ID format' });
+        }
+
+        if (
+            req.body.role !== undefined ||
+            req.body.password !== undefined ||
+            req.body.email !== undefined ||
+            req.body.internCode !== undefined
+        ) {
+            return res.status(403).json({ message: 'Cannot modify role, email, password, or intern code via this endpoint' });
+        }
+
+        const intern = await User.findOne({ _id: id, role: 'intern' });
+        if (!intern) {
+            return res.status(404).json({ message: 'Intern not found' });
+        }
+
+        const {
+            fullName,
+            mobileNo,
+            domain,
+            startDate,
+            endDate,
+            collegeName,
+            degree,
+            internshipTitle,
+            mentor,
+            performanceRemarks,
+            status
+        } = req.body;
+
+        const effectiveStart = startDate !== undefined ? new Date(startDate) : intern.startDate;
+        const effectiveEnd = endDate !== undefined ? new Date(endDate) : intern.endDate;
+        if (effectiveStart && effectiveEnd && effectiveStart > effectiveEnd) {
+            return res.status(400).json({ message: 'Start date cannot be after end date' });
+        }
+
+        if (status !== undefined && !['upcoming', 'ongoing', 'completed', 'cancelled'].includes(status)) {
+            return res.status(400).json({ message: 'Invalid status value. Must be upcoming, ongoing, completed, or cancelled' });
+        }
+
+        const changes = {};
+        if (fullName !== undefined) { changes.fullName = { from: intern.fullName, to: fullName }; intern.fullName = fullName; }
+        if (mobileNo !== undefined) { changes.mobileNo = { from: intern.mobileNo, to: mobileNo }; intern.mobileNo = mobileNo; }
+        if (domain !== undefined) { changes.domain = { from: intern.domain, to: domain }; intern.domain = domain; }
+        if (startDate !== undefined) { changes.startDate = { from: intern.startDate, to: startDate }; intern.startDate = startDate; }
+        if (endDate !== undefined) { changes.endDate = { from: intern.endDate, to: endDate }; intern.endDate = endDate; }
+
+        if (!intern.internshipDetails) intern.internshipDetails = {};
+        if (collegeName !== undefined) { changes.collegeName = { from: intern.internshipDetails.collegeName, to: collegeName }; intern.internshipDetails.collegeName = collegeName; }
+        if (degree !== undefined) { changes.degree = { from: intern.internshipDetails.degree, to: degree }; intern.internshipDetails.degree = degree; }
+        if (internshipTitle !== undefined) { changes.internshipTitle = { from: intern.internshipDetails.internshipTitle, to: internshipTitle }; intern.internshipDetails.internshipTitle = internshipTitle; }
+        if (mentor !== undefined) { changes.mentor = { from: intern.internshipDetails.mentor, to: mentor }; intern.internshipDetails.mentor = mentor; }
+        if (performanceRemarks !== undefined) { changes.performanceRemarks = { from: intern.internshipDetails.performanceRemarks, to: performanceRemarks }; intern.internshipDetails.performanceRemarks = performanceRemarks; }
+        if (status !== undefined) { changes.status = { from: intern.internshipDetails.status, to: status }; intern.internshipDetails.status = status; }
+
+        await intern.save();
+
+        await logAudit({
+            userId: req.user.id,
+            action: 'UPDATE_INTERN_BY_ADMIN',
+            entityType: 'User',
+            entityId: intern._id,
+            description: changes,
+            req
+        });
+
+        const sanitizedIntern = await User.findById(intern._id)
+            .select('-password -resetPasswordToken -resetPasswordExpires')
+            .populate('internshipDetails.teamLeader', 'fullName email mobileNo');
+
+        return res.status(200).json({
+            message: 'Intern updated successfully',
+            intern: sanitizedIntern
+        });
+    } catch (err) {
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+}
+
+export async function assignInternTeamLeader(req, res) {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid intern ID format' });
+        }
+
+        const intern = await User.findOne({ _id: id, role: 'intern' });
+        if (!intern) {
+            return res.status(404).json({ message: 'Intern not found' });
+        }
+
+        const { teamLeaderId } = req.body;
+        if (!teamLeaderId) {
+            return res.status(400).json({ message: 'teamLeaderId is required' });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(teamLeaderId)) {
+            return res.status(400).json({ message: 'Invalid teamLeaderId format' });
+        }
+
+        const tl = await User.findOne({ _id: teamLeaderId, role: 'teamleader' });
+        if (!tl) {
+            return res.status(404).json({ message: 'Team leader not found' });
+        }
+
+        if (!intern.internshipDetails) intern.internshipDetails = {};
+        const prevTlId = intern.internshipDetails.teamLeader;
+        const prevTlEmail = intern.internshipDetails.teamleaderEmail;
+
+        intern.internshipDetails.teamLeader = tl._id;
+        intern.internshipDetails.teamleaderEmail = tl.email.toLowerCase();
+        await intern.save();
+
+        await logAudit({
+            userId: req.user.id,
+            action: prevTlId ? 'REASSIGN_INTERN_TEAM_LEADER' : 'ASSIGN_INTERN_TEAM_LEADER',
+            entityType: 'User',
+            entityId: intern._id,
+            description: {
+                previousTeamLeaderId: prevTlId,
+                previousTeamLeaderEmail: prevTlEmail,
+                newTeamLeaderId: tl._id,
+                newTeamLeaderEmail: tl.email.toLowerCase()
+            },
+            req
+        });
+
+        const sanitizedIntern = await User.findById(intern._id)
+            .select('-password -resetPasswordToken -resetPasswordExpires')
+            .populate('internshipDetails.teamLeader', 'fullName email mobileNo');
+
+        return res.status(200).json({
+            message: 'Team leader assigned successfully',
+            intern: sanitizedIntern
+        });
+    } catch (err) {
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+}
+
 export async function getAllTeamLeaders(req, res) {
     try {
-        const teamLeaders = await User.find({ role: 'teamleader' })
-            .select('fullName email mobileNo')
+        const filter = { role: 'teamleader' };
+        if (req.query.search) {
+            const s = req.query.search.trim();
+            filter.$or = [
+                { fullName: { $regex: s, $options: 'i' } },
+                { email: { $regex: s, $options: 'i' } },
+                { mobileNo: { $regex: s, $options: 'i' } }
+            ];
+        }
+
+        const teamLeaders = await User.find(filter)
+            .select('fullName email mobileNo startDate endDate createdAt')
             .sort({ fullName: 1 });
 
-        return res.status(200).json({ teamLeaders });
+        const populated = await Promise.all(
+            teamLeaders.map(async (tl) => {
+                const count = await User.countDocuments({
+                    role: 'intern',
+                    $or: [
+                        { 'internshipDetails.teamLeader': tl._id },
+                        { 'internshipDetails.teamleaderEmail': tl.email.toLowerCase() }
+                    ]
+                });
+                return {
+                    ...tl.toObject(),
+                    assignedInternCount: count
+                };
+            })
+        );
+
+        return res.status(200).json({ teamLeaders: populated });
+    } catch (err) {
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+}
+
+export async function getTeamLeaderById(req, res) {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid team leader ID format' });
+        }
+
+        const teamLeader = await User.findOne({ _id: id, role: 'teamleader' })
+            .select('fullName email mobileNo startDate endDate createdAt');
+
+        if (!teamLeader) {
+            return res.status(404).json({ message: 'Team leader not found' });
+        }
+
+        const assignedInterns = await User.find({
+            role: 'intern',
+            $or: [
+                { 'internshipDetails.teamLeader': teamLeader._id },
+                { 'internshipDetails.teamleaderEmail': teamLeader.email.toLowerCase() }
+            ]
+        })
+            .select('fullName email internCode domain startDate endDate internshipDetails.status')
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            teamLeader: {
+                ...teamLeader.toObject(),
+                assignedInternCount: assignedInterns.length
+            },
+            assignedInterns
+        });
+    } catch (err) {
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+}
+
+export async function updateTeamLeader(req, res) {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid team leader ID format' });
+        }
+
+        if (req.body.role !== undefined || req.body.password !== undefined || req.body.email !== undefined) {
+            return res.status(403).json({ message: 'Cannot modify role, email, or credentials via this endpoint' });
+        }
+
+        const teamLeader = await User.findOne({ _id: id, role: 'teamleader' });
+        if (!teamLeader) {
+            return res.status(404).json({ message: 'Team leader not found' });
+        }
+
+        const { fullName, mobileNo, startDate, endDate } = req.body;
+        const effectiveStart = startDate !== undefined ? new Date(startDate) : teamLeader.startDate;
+        const effectiveEnd = endDate !== undefined ? new Date(endDate) : teamLeader.endDate;
+        if (effectiveStart && effectiveEnd && effectiveStart > effectiveEnd) {
+            return res.status(400).json({ message: 'Start date cannot be after end date' });
+        }
+
+        const changes = {};
+        if (fullName !== undefined) { changes.fullName = { from: teamLeader.fullName, to: fullName }; teamLeader.fullName = fullName; }
+        if (mobileNo !== undefined) { changes.mobileNo = { from: teamLeader.mobileNo, to: mobileNo }; teamLeader.mobileNo = mobileNo; }
+        if (startDate !== undefined) { changes.startDate = { from: teamLeader.startDate, to: startDate }; teamLeader.startDate = startDate; }
+        if (endDate !== undefined) { changes.endDate = { from: teamLeader.endDate, to: endDate }; teamLeader.endDate = endDate; }
+
+        await teamLeader.save();
+
+        await logAudit({
+            userId: req.user.id,
+            action: 'UPDATE_TEAM_LEADER_BY_ADMIN',
+            entityType: 'User',
+            entityId: teamLeader._id,
+            description: changes,
+            req
+        });
+
+        const sanitized = await User.findById(teamLeader._id).select('fullName email mobileNo startDate endDate role createdAt');
+
+        return res.status(200).json({
+            message: 'Team leader updated successfully',
+            teamLeader: sanitized
+        });
     } catch (err) {
         return res.status(500).json({ message: 'Server error', error: err.message });
     }
@@ -146,6 +497,9 @@ export async function getAllTeamLeaders(req, res) {
 
 export async function getInternsByTeamLeader(req, res) {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Invalid team leader ID format' });
+        }
         const teamLeader = await User.findOne({
             _id: req.params.id,
             role: 'teamleader'
@@ -157,7 +511,10 @@ export async function getInternsByTeamLeader(req, res) {
 
         const interns = await User.find({
             role: 'intern',
-            'internshipDetails.teamleaderEmail': teamLeader.email.toLowerCase()
+            $or: [
+                { 'internshipDetails.teamLeader': teamLeader._id },
+                { 'internshipDetails.teamleaderEmail': teamLeader.email.toLowerCase() }
+            ]
         })
             .select('fullName email internCode domain startDate endDate internshipDetails.status');
 

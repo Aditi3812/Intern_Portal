@@ -61,8 +61,12 @@ export const createCertificateDraft = async (requestId) => {
   }
 
   // Must use the matching active CertificateTemplate (no fallback template)
+  const normalizedType = request.certificateType === 'internship_completion_certificate'
+    ? 'completion_certificate'
+    : request.certificateType;
+
   const template = await CertificateTemplate.findOne({
-    certificateType: request.certificateType,
+    certificateType: { $in: [request.certificateType, normalizedType] },
     status: 'active'
   });
 
@@ -83,7 +87,98 @@ export const createCertificateDraft = async (requestId) => {
 
   const formattedCertType = (request.certificateType || '').replace(/_/g, ' ');
 
-  const templateData = {
+  // Extract custom request metadata safely if available
+  const rawMeta = request.metadata instanceof Map
+    ? Object.fromEntries(request.metadata)
+    : (request.metadata || {});
+
+  let durationStr = '';
+  if (user.startDate && user.endDate) {
+    const s = new Date(user.startDate);
+    const e = new Date(user.endDate);
+    const diffMonths = Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24 * 30.4375)));
+    durationStr = `${diffMonths} Month${diffMonths > 1 ? 's' : ''}`;
+  }
+
+  // Sanitize and support certificate-specific metadata
+  const safeMeta = {};
+  for (const [key, value] of Object.entries(rawMeta)) {
+    if (typeof value === 'string' && value.trim()) {
+      safeMeta[key] = value.trim();
+      const pascal = key.charAt(0).toUpperCase() + key.slice(1);
+      const camel = key.charAt(0).toLowerCase() + key.slice(1);
+      safeMeta[pascal] = value.trim();
+      safeMeta[camel] = value.trim();
+    }
+  }
+
+  // Supplementary fields with safe defaults
+  const supplementaryData = {
+    // Bonafide
+    CollegeName: safeMeta.CollegeName || safeMeta.collegeName || '',
+    collegeName: safeMeta.CollegeName || safeMeta.collegeName || '',
+    Purpose: safeMeta.Purpose || safeMeta.purpose || 'Academic Requirement',
+    purpose: safeMeta.Purpose || safeMeta.purpose || 'Academic Requirement',
+    InternshipTitle: safeMeta.InternshipTitle || safeMeta.internshipTitle || (user.domain ? `${user.domain} Intern` : 'Intern'),
+    internshipTitle: safeMeta.InternshipTitle || safeMeta.internshipTitle || (user.domain ? `${user.domain} Intern` : 'Intern'),
+    Duration: safeMeta.Duration || safeMeta.duration || durationStr,
+    duration: safeMeta.Duration || safeMeta.duration || durationStr,
+    OrganizationName: 'UptoSkills',
+    organizationName: 'UptoSkills',
+    Organization: 'UptoSkills',
+    organization: 'UptoSkills',
+
+    // Offer Letter
+    InternshipRole: safeMeta.InternshipRole || safeMeta.internshipRole || (user.domain ? `${user.domain} Intern` : 'Intern'),
+    internshipRole: safeMeta.InternshipRole || safeMeta.internshipRole || (user.domain ? `${user.domain} Intern` : 'Intern'),
+    Stipend: safeMeta.Stipend || safeMeta.stipend || '',
+    stipend: safeMeta.Stipend || safeMeta.stipend || '',
+    ReportingManager: safeMeta.ReportingManager || safeMeta.reportingManager || '',
+    reportingManager: safeMeta.ReportingManager || safeMeta.reportingManager || '',
+    ManagerName: safeMeta.ManagerName || safeMeta.managerName || safeMeta.ReportingManager || safeMeta.reportingManager || '',
+    managerName: safeMeta.ManagerName || safeMeta.managerName || safeMeta.ReportingManager || safeMeta.reportingManager || '',
+    JoiningDate: safeMeta.JoiningDate || safeMeta.joiningDate || formatDate(user.startDate),
+    joiningDate: safeMeta.JoiningDate || safeMeta.joiningDate || formatDate(user.startDate),
+    JoiningGuidelines: safeMeta.JoiningGuidelines || safeMeta.joiningGuidelines || '',
+    joiningGuidelines: safeMeta.JoiningGuidelines || safeMeta.joiningGuidelines || '',
+    HRName: safeMeta.HRName || safeMeta.hrName || 'HR Team',
+    hrName: safeMeta.HRName || safeMeta.hrName || 'HR Team',
+
+    // OJT
+    TrainingProgram: safeMeta.TrainingProgram || safeMeta.trainingProgram || (user.domain ? `${user.domain} Training Program` : 'On-the-Job Training Program'),
+    trainingProgram: safeMeta.TrainingProgram || safeMeta.trainingProgram || (user.domain ? `${user.domain} Training Program` : 'On-the-Job Training Program'),
+    TrainingStartDate: safeMeta.TrainingStartDate || safeMeta.trainingStartDate || formatDate(user.startDate),
+    trainingStartDate: safeMeta.TrainingStartDate || safeMeta.trainingStartDate || formatDate(user.startDate),
+    TrainingEndDate: safeMeta.TrainingEndDate || safeMeta.trainingEndDate || formatDate(user.endDate),
+    trainingEndDate: safeMeta.TrainingEndDate || safeMeta.trainingEndDate || formatDate(user.endDate),
+    MentorName: safeMeta.MentorName || safeMeta.mentorName || '',
+    mentorName: safeMeta.MentorName || safeMeta.mentorName || '',
+    PerformanceDetails: safeMeta.PerformanceDetails || safeMeta.performanceDetails || '',
+    performanceDetails: safeMeta.PerformanceDetails || safeMeta.performanceDetails || '',
+
+    // Intern of the Month
+    AwardMonth: safeMeta.AwardMonth || safeMeta.awardMonth || '',
+    awardMonth: safeMeta.AwardMonth || safeMeta.awardMonth || '',
+    RecognitionCriteria: safeMeta.RecognitionCriteria || safeMeta.recognitionCriteria || '',
+    recognitionCriteria: safeMeta.RecognitionCriteria || safeMeta.recognitionCriteria || '',
+
+    // League Winner
+    WinnerName: user.fullName || '',
+    winnerName: user.fullName || '',
+    EventName: safeMeta.EventName || safeMeta.eventName || '',
+    eventName: safeMeta.EventName || safeMeta.eventName || '',
+    Position: safeMeta.Position || safeMeta.position || '',
+    position: safeMeta.Position || safeMeta.position || '',
+    EventDate: safeMeta.EventDate || safeMeta.eventDate || formatDate(new Date()),
+    eventDate: safeMeta.EventDate || safeMeta.eventDate || formatDate(new Date()),
+    Place: safeMeta.Place || safeMeta.place || 'New Delhi',
+    place: safeMeta.Place || safeMeta.place || 'New Delhi',
+
+    ...safeMeta
+  };
+
+  // Protected trusted core fields — cannot be overridden by request metadata
+  const trustedCoreData = {
     InternName: user.fullName || '',
     internName: user.fullName || '',
     fullName: user.fullName || '',
@@ -106,6 +201,11 @@ export const createCertificateDraft = async (requestId) => {
     rawCertificateType: request.certificateType || '',
     VerificationCode: verificationCode,
     verificationCode: verificationCode
+  };
+
+  const templateData = {
+    ...supplementaryData,
+    ...trustedCoreData
   };
 
   const compiledTemplate = Handlebars.compile(template.content);
