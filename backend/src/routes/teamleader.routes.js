@@ -4,6 +4,7 @@ import verifyAuth from '../middlewares/verifyAuth.js';
 import {
 	createIntern,
 	getInternsForTL,
+	getInternsCompletingSoon,
 	getAssignedInternById,
 	updateAssignedIntern,
 	getRequestsForReview,
@@ -22,6 +23,7 @@ teamleaderRouter.use(verifyAuth, (req, res, next) => {
 
 teamleaderRouter.post('/create-intern', registerValidator, createIntern);
 
+teamleaderRouter.get('/interns/completing-soon', getInternsCompletingSoon);
 teamleaderRouter.get('/interns', getInternsForTL);
 teamleaderRouter.get('/interns/:id', getAssignedInternById);
 teamleaderRouter.patch('/interns/:id', updateAssignedIntern);

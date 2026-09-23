@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import CreateIntern from '../components/CreateIntern';
 import MyInternsList from '../components/MyInternsList';
 import PendingReviewList from '../components/PendingReviewList';
+import InternCompletionView from '../components/InternCompletionView';
 import './TLDashboard.css';
 
 const TLDashboard = () => {
@@ -40,6 +41,7 @@ const TLDashboard = () => {
           <button className={`admin-nav-item ${activeView === 'overview' ? 'active' : ''}`} onClick={() => setActiveView('overview')}><span>▦</span> Overview</button>
           <button className={`admin-nav-item ${activeView === 'requests' ? 'active' : ''}`} onClick={() => setActiveView('requests')}><span>▤</span> Certificate Requests</button>
           <button className={`admin-nav-item ${activeView === 'myInterns' ? 'active' : ''}`} onClick={() => setActiveView('myInterns')}><span>♙</span> My Interns</button>
+          <button className={`admin-nav-item ${activeView === 'completingSoon' ? 'active' : ''}`} onClick={() => setActiveView('completingSoon')}><span>⏳</span> Completing Soon</button>
           <button className={`admin-nav-item ${activeView === 'intern' ? 'active' : ''}`} onClick={() => setActiveView('intern')}><span>＋</span> Create Intern</button>
         </nav>
         <div className="admin-sidebar-note"><span>●</span> Team leader access enabled</div>
@@ -48,21 +50,21 @@ const TLDashboard = () => {
       <main className="admin-dashboard-main">
         <header className="admin-page-header">
           <p className="admin-eyebrow">TEAM LEADER</p>
-          <h1>{activeView === 'overview' ? 'Welcome back' : activeView === 'requests' ? 'Certificate requests' : activeView === 'myInterns' ? 'My interns' : 'Create an intern'}</h1>
+          <h1>{activeView === 'overview' ? 'Welcome back' : activeView === 'requests' ? 'Certificate requests' : activeView === 'myInterns' ? 'My interns' : 'Completing Interns'}</h1>
           <p>{activeView === 'overview' ? 'Manage your team from one secure workspace.' : activeView === 'requests' ? 'Review intern requests waiting for your decision.' : activeView === 'myInterns' ? 'View the interns assigned to your team.' : 'Complete the details below to create an intern account.'}</p>
         </header>
 
-        {activeView === 'overview' ? (
-          <section className="admin-profile-card" aria-label="Team leader profile">
-            <div className="admin-profile-heading"><div className="admin-profile-avatar">{initials}</div><div><p className="admin-eyebrow">YOUR PROFILE</p><h2>{user?.fullName || 'Team Leader'}</h2><p>{user?.email || 'Loading profile...'}</p></div></div>
-            <div className="admin-profile-details">
-              <div><span>Role</span><strong>{user?.role || 'teamleader'}</strong></div>
-              <div><span>Mobile number</span><strong>{user?.mobileNo || 'Not provided'}</strong></div>
-              <div><span>Member since</span><strong>{user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</strong></div>
-            </div>
-            <div className="admin-quick-actions"><button onClick={() => setActiveView('intern')}><span>＋</span><strong>Create Intern</strong><small>Register an intern for your team</small></button></div>
-          </section>
-        ) : activeView === 'requests' ? <PendingReviewList /> : activeView === 'myInterns' ? <MyInternsList /> : <div className="teamleader-form-grid"><CreateIntern /></div>}
+          {activeView === 'overview' ? (
+            <section className="admin-profile-card" aria-label="Team leader profile">
+              <div className="admin-profile-heading"><div className="admin-profile-avatar">{initials}</div><div><p className="admin-eyebrow">YOUR PROFILE</p><h2>{user?.fullName || 'Team Leader'}</h2><p>{user?.email || 'Loading profile...'}</p></div></div>
+              <div className="admin-profile-details">
+                <div><span>Role</span><strong>{user?.role || 'teamleader'}</strong></div>
+                <div><span>Mobile number</span><strong>{user?.mobileNo || 'Not provided'}</strong></div>
+                <div><span>Member since</span><strong>{user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</strong></div>
+              </div>
+              <div className="admin-quick-actions"><button onClick={() => setActiveView('intern')}><span>＋</span><strong>Create Intern</strong><small>Register an intern for your team</small></button></div>
+            </section>
+          ) : activeView === 'requests' ? <PendingReviewList /> : activeView === 'myInterns' ? <MyInternsList /> : activeView === 'completingSoon' ? <InternCompletionView /> : <div className="teamleader-form-grid"><CreateIntern /></div>}
       </main>
     </div>
   );

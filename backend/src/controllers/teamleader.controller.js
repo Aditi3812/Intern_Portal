@@ -233,6 +233,36 @@ export async function updateAssignedIntern(req, res) {
 
 
 
+export const getInternsCompletingSoon = async (req, res) => {
+  try {
+    const tlId = req.user.id;
+    const tlEmail = req.user.email?.toLowerCase();
+
+    const now = new Date();
+    const in3Days = new Date(now);
+    in3Days.setDate(in3Days.getDate() + 3);
+    in3Days.setHours(23, 59, 59, 999);
+
+    const filter = {
+      role: 'intern',
+      endDate: { $gte: now, $lte: in3Days },
+      $or: [
+        { 'internshipDetails.teamLeader': tlId },
+        { 'internshipDetails.teamleaderEmail': tlEmail }
+      ]
+    };
+
+    const interns = await User.find(filter)
+      .select('-password -resetPasswordToken -resetPasswordExpires')
+      .sort({ endDate: 1 });
+
+    res.status(200).json({ interns });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+
 // Step 1: TL sees requests waiting for their review
 export const getRequestsForReview = async (req, res) => {
   try {

@@ -40,6 +40,11 @@ export const reviewRequest = async (id, action, rejectionReason) => {
   return response.data;
 };
 
+export const getInternsCompletingSoon = async () => {
+  const response = await tlApi.get('/interns/completing-soon');
+  return response.data;
+};
+
 export const createIntern = async (payload) => {
   try {
     const response = await tlApi.post('/create-intern', payload);
