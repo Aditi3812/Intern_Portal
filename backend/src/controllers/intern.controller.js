@@ -17,7 +17,7 @@ export const generateRequestNumber = async () => {
   const counter = await Counter.findByIdAndUpdate(
     `certRequest:${year}`,
     { $inc: { seq: 1 } },
-     { returnDocument: 'after', upsert: true }
+    { returnDocument: 'after', upsert: true }
   );
   const seq = counter.seq;
   return `CERT-${year}-${String(seq).padStart(5, '0')}`;
