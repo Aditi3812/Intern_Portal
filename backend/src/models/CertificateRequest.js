@@ -60,16 +60,30 @@ const certificateRequestSchema = new mongoose.Schema(
 
     requestedAt: {
         type: Date,
-        default: Date.now
+        default: Date.now,
+        index: true
     },
 
     reviewedAt: {
-        type: Date
+        type: Date,
+        index: true
     },
 
     reviewedBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "user"
+        ref: "user",
+        index: true
+    },
+
+    forwardedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user",
+        index: true
+    },
+
+    forwardedAt: {
+        type: Date,
+        index: true
     },
 
     rejectionReason: {
