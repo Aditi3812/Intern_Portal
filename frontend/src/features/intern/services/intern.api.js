@@ -1,10 +1,6 @@
-import axios from 'axios';
+import { API_BASE_URL, createApiClient } from '@/shared/config/api.config';
 
-const internApi = axios.create({
-  baseURL: 'http://localhost:3000/api/intern',
-  headers: { 'Content-Type': 'application/json' },
-  withCredentials: true,
-});
+const internApi = createApiClient({ baseURL: `${API_BASE_URL}/api/intern` });
 
 export const getProfile = async () => {
   const response = await internApi.get('/profile');

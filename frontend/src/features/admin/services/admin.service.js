@@ -1,12 +1,6 @@
-import axios from 'axios';
+import { createApiClient } from '@/shared/config/api.config';
 
-const adminApi = axios.create({
-  baseURL: 'http://localhost:3000',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
-});
+const adminApi = createApiClient();
 
 const request = async (method, url, payload) => {
   try {

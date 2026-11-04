@@ -1,0 +1,392 @@
+/* =========================================================
+   PUBLIC CERTIFICATE VERIFICATION PAGE (Task F)
+   Mobile-First, Responsive & Theme-Aware
+========================================================= */
+
+.verify-page-shell {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--page);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  position: relative;
+  overflow-x: hidden;
+  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.verify-backdrop-glow {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(109, 114, 234, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.verify-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Header */
+.verify-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.verify-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.verify-logo-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(109, 114, 234, 0.35);
+}
+
+.verify-logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.verify-brand-name {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.verify-brand-sub {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.verify-secure-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.verify-shield-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--accent);
+}
+
+/* Base Card */
+.verify-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 28px;
+  box-shadow: 0 20px 48px var(--shadow), 0 0 0 1px var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Card Top Badges */
+.verify-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.verify-status-badge {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.badge-valid {
+  background: rgba(52, 211, 153, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.badge-revoked {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-neutral {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.verify-status-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.valid-icon {
+  background: rgba(52, 211, 153, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.revoked-icon {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.not-found-icon,
+.error-icon {
+  font-size: 32px;
+  margin: 0 auto;
+}
+
+/* Card Typography */
+.verify-recipient-name {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--text);
+  margin: 8px 0 2px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.verify-cert-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-1);
+  margin: 0 0 12px;
+}
+
+.verify-card-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.verify-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Details Grid */
+.verify-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+@media (max-width: 480px) {
+  .verify-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.verify-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.verify-detail-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.verify-detail-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.cert-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--accent-1);
+  font-size: 12px;
+  background: var(--input);
+  padding: 2px 6px;
+  border-radius: 6px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.valid-status-text {
+  color: #10b981;
+}
+
+.revoked-status-text {
+  color: #ef4444;
+}
+
+/* Alert Banner (Revoked state) */
+.verify-alert-banner {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Notice Box */
+.verify-notice-box {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Card Footer Note */
+.verify-footer-note {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Skeleton Loading */
+.skeleton-card {
+  gap: 18px;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--panel) 0%,
+    var(--line) 50%,
+    var(--panel) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerAnim 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmerAnim {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-badge {
+  width: 120px;
+  height: 24px;
+  border-radius: 999px;
+}
+
+.skeleton-title {
+  width: 75%;
+  height: 32px;
+}
+
+.skeleton-sub {
+  width: 50%;
+  height: 18px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  height: 120px;
+}
+
+.skeleton-cell {
+  height: 50px;
+}
+
+.verify-loading-text {
+  font-size: 13px;
+  text-align: center;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+/* Retry Button */
+.verify-retry-btn {
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: center;
+  transition: all 0.2s ease;
+}
+
+.verify-retry-btn:hover {
+  background: var(--accent-1);
+  transform: translateY(-1px);
+}
+
+/* Page Footer */
+.verify-footer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+}

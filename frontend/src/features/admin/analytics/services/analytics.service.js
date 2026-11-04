@@ -1,10 +1,6 @@
-import axios from 'axios';
+import { createApiClient } from '@/shared/config/api.config';
 
-const api = axios.create({
-  baseURL: 'http://localhost:3000',
-  headers: { 'Content-Type': 'application/json' },
-  withCredentials: true
-});
+const api = createApiClient();
 
 const buildQueryString = (params = {}) => {
   const searchParams = new URLSearchParams();
