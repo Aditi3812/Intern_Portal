@@ -16,8 +16,22 @@ dns.setServers(["1.1.1.1", "8.8.8.8"]);
 const app = express();
 
 // Allow the frontend to send and receive the authentication cookie.
+// `FRONTEND_URL` is a comma-separated list of allowed origins.
+// Requests without an origin (server-to-server, Postman, curl) are allowed too.
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+	.split(',')
+	.map((origin) => origin.trim())
+	.filter(Boolean);
+
 app.use(cors({
-	origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+	origin(origin) {
+		// No origin header -> allow (server-to-server, Postman, curl, health checks).
+		if (!origin) return true;
+		// Allow any of the configured origins (e.g. Cloudflare Pages + localhost).
+		if (allowedOrigins.includes(origin)) return origin;
+		// Block disallowed origins.
+		return false;
+	},
 	credentials: true
 }));
 

@@ -16,7 +16,9 @@ import { sendEmail } from '../utils/sendEmail.js';
 ========================================================= */
 
 const FRONTEND_URL =
-  process.env.FRONTEND_URL || 'http://localhost:5173';
+  (process.env.FRONTEND_URL || 'http://localhost:5173')
+    .split(',')[0]
+    .trim();
 
 /* =========================================================
    CERTIFICATE TITLE MAPPER

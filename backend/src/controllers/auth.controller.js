@@ -108,7 +108,11 @@ export async function forgotPassword(req, res) {
         user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
         await user.save();
 
-        const resetLink = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`;
+        // Use the first configured origin for password-reset email links.
+        const resetOrigin = (process.env.FRONTEND_URL || 'http://localhost:5173')
+            .split(',')[0]
+            .trim();
+        const resetLink = `${resetOrigin}/reset-password/${rawToken}`;
 
         await sendEmail({
             to: user.email,
