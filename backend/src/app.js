@@ -23,22 +23,21 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
 	.map((origin) => origin.trim())
 	.filter(Boolean);
 
+// Clean, native array usage with NO function expressions to cause ReferenceErrors
 app.use(cors({
-	origin(origin) {
-		// No origin header -> allow (server-to-server, Postman, curl, health checks).
-		if (!origin) return true;
-		// Allow any of the configured origins (e.g. Cloudflare Pages + localhost).
-		if (allowedOrigins.includes(origin)) return origin;
-		// Block disallowed origins.
-		return false;
-	},
+	origin: allowedOrigins,
 	credentials: true,
 	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-	allowedHeaders: ['Content-Type', 'Authorization']
+	allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+	optionsSuccessStatus: 200 
 }));
+
+// Keep your health check endpoint directly below it
 app.get('/', (req, res) => {
     res.status(200).send("OK");
 });
+
+
 // Parse JSON request bodies and populate `req.body`.
 app.use(express.json());
 
