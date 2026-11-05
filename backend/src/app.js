@@ -29,16 +29,17 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
 app.use(cors({
 	origin(origin) {
 		// No origin header -> allow (server-to-server, Postman, curl, health checks).
-		if (!origin) return true;
+		if (!origin) return callback(null, true);
 		// Allow any of the configured origins (e.g. Cloudflare Pages + localhost).
-		if (allowedOrigins.includes(origin)) return origin;
-		// Block disallowed origins.
-		else {
-            // This properly responds to the browser rejecting the origin
-            callback(new Error('Not allowed by CORS'));
-        }
+		if (allowedOrigins.indexOf(origin) !== -1) {
+			callback(null, true);
+		} else {
+			callback(new Error('Not allowed by CORS'));
+		}
 	},
-	credentials: true
+	credentials: true,
+	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+	allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Parse JSON request bodies and populate `req.body`.
