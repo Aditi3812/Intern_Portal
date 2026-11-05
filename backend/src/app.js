@@ -30,7 +30,10 @@ app.use(cors({
 		// Allow any of the configured origins (e.g. Cloudflare Pages + localhost).
 		if (allowedOrigins.includes(origin)) return origin;
 		// Block disallowed origins.
-		return false;
+		else {
+            // This properly responds to the browser rejecting the origin
+            callback(new Error('Not allowed by CORS'));
+        }
 	},
 	credentials: true
 }));
