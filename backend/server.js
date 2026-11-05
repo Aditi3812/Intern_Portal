@@ -19,10 +19,12 @@ const startServer = async () => {
 
         // 3. Register your background jobs safely
         console.log("Initializing background cron workers...");
-        scheduleInternshipStatusJob();
-        scheduleRetentionJob();
-        console.log("All background workers ready.");
-
+        setTimeout(() => {
+            scheduleInternshipStatusJob();
+            scheduleRetentionJob();
+            console.log("All background cron workers are safely active in the event loop.");
+        }, 5000);
+        
     } catch (error) {
         console.error("Post-startup background services failed:", error);
         // Optional: keep running or kill the server depending on your fallback logic

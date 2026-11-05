@@ -15,6 +15,9 @@ dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 const app = express();
 
+app.get('/', (req, res) => {
+    res.status(200).send("OK");
+});
 // Allow the frontend to send and receive the authentication cookie.
 // `FRONTEND_URL` is a comma-separated list of allowed origins.
 // Requests without an origin (server-to-server, Postman, curl) are allowed too.
