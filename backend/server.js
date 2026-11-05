@@ -4,18 +4,32 @@ import { scheduleInternshipStatusJob } from "./src/jobs/internshipStatus.job.js"
 import { scheduleRetentionJob } from "./src/jobs/retention.job.js"
 
 const startServer = async () => {
-    await connectToDB();
-    scheduleInternshipStatusJob();
-    scheduleRetentionJob();
-
     const PORT = process.env.PORT || 3000;
-    app.listen(PORT, '0.0.0.0', () => {
+    
+    // 1. Instantly open the port to make Render happy and set service to live
+    const server = app.listen(PORT, '0.0.0.0', () => {
         console.log(`Server is listening on port ${PORT}`);
     });
+
+    try {
+        // 2. Run Database connection asynchronously in the background
+        console.log("Connecting to MongoDB...");
+        await connectToDB();
+        console.log("MongoDB connection verified.");
+
+        // 3. Register your background jobs safely
+        console.log("Initializing background cron workers...");
+        scheduleInternshipStatusJob();
+        scheduleRetentionJob();
+        console.log("All background workers ready.");
+
+    } catch (error) {
+        console.error("Post-startup background services failed:", error);
+        // Optional: keep running or kill the server depending on your fallback logic
+    }
 };
 
 startServer().catch((error) => {
-    console.error("Server startup failed", error);
+    console.error("Server execution crash:", error);
     process.exitCode = 1;
 });
-
